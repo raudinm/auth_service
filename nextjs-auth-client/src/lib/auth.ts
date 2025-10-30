@@ -95,11 +95,18 @@ export const authOptions: NextAuthOptions = {
             access_token: account.access_token,
           });
 
+          console.log("Google OAuth response:", response.data);
+
           const { access, refresh, user: backendUser } = response.data;
 
           token.accessToken = access;
           token.refreshToken = refresh;
-          token.user = backendUser;
+          token.user = {
+            id: backendUser.id,
+            email: backendUser.email,
+            name: backendUser.name,
+            avatar: backendUser.avatar,
+          };
         } catch (error) {
           console.error("Google OAuth error:", error);
           return null;
