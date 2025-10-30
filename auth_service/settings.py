@@ -56,6 +56,10 @@ INSTALLED_APPS = [
     'corsheaders',
 
     'accounts',
+
+    # for token blacklisting
+    'rest_framework_simplejwt.token_blacklist',
+
 ]
 
 MIDDLEWARE = [
@@ -109,9 +113,9 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
 ]
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = True
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False') == 'True'
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
 CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://localhost:8000').split(',')
 

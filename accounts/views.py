@@ -1,29 +1,132 @@
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.response import Response
-from rest_framework.views import APIView
 from django.utils import timezone
-from .models import DeviceSession
 from django.contrib.auth import authenticate
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from rest_framework_simplejwt.views import TokenRefreshView
+from .models import DeviceSession
+from .serializers import UserSerializer, DeviceSessionSerializer
 
 
+# === LOGIN ===
 class LoginView(APIView):
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
-        device_name = request.data.get('device_name', 'unknown')
+        email = request.data.get("email")
+        password = request.data.get("password")
+        device_name = request.data.get("device_name", "Unknown Device")
+
         user = authenticate(request, username=email, password=password)
         if not user:
-            return Response({'detail': 'Invalid credentials'}, status=400)
+            return Response({"detail": "Invalid credentials"}, status=400)
+
         refresh = RefreshToken.for_user(user)
-        # Save device session and store refresh token jti
-        jti = str(refresh['jti'])
-        ds = DeviceSession.objects.create(
-            user=user, device_name=device_name, refresh_token_jti=jti)
-        data = {
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'session_id': str(ds.id),
-        }
-        return Response(data)
+        jti = str(refresh["jti"])
+        device_session = DeviceSession.objects.create(
+            user=user, device_name=device_name, refresh_token_jti=jti
+        )
+
+        return Response(
+            {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "session_id": str(device_session.id),
+                "user": UserSerializer(user).data,
+            }
+        )
+
+
+# === LOGOUT ===
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Logs out the user by revoking the current refresh token.
+        If the blacklist app is enabled, the token is also blacklisted.
+        """
+        refresh_token = request.data.get("refresh")
+
+        # Validate param from request
+        if not refresh_token:
+            return Response({"detail": "Missing refresh token"}, status=400)
+
+        try:
+            token = RefreshToken(refresh_token)
+            jti = token["jti"]
+            DeviceSession.objects.filter(
+                refresh_token_jti=jti).update(revoked=True)
+            token.blacklist()  # optional, requires SIMPLEJWT blacklist app
+        except Exception:
+            pass
+        return Response({"detail": "Logged out successfully"}, status=205)
+
+
+# === LIST ALL ACTIVE SESSIONS ===
+class SessionListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        Returns all device sessions associated with the authenticated user.
+        """
+        sessions = DeviceSession.objects.filter(user=request.user)
+        serializer = DeviceSessionSerializer(sessions, many=True)
+        return Response(serializer.data)
+
+
+# === REVOKE A SPECIFIC SESSION ===
+class SessionRevokeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        """
+        Revokes a specific device session by marking it as 'revoked'.
+        """
+        try:
+            session = DeviceSession.objects.get(id=pk, user=request.user)
+        except DeviceSession.DoesNotExist:
+            return Response({"detail": "Session not found"}, status=404)
+
+        session.revoked = True
+        session.save()
+        return Response({"detail": "Session revoked"}, status=200)
+
+
+# === TOKEN REFRESH WITH SESSION CONTROL ===
+class SecureTokenRefreshView(TokenRefreshView):
+    """
+    Extends the default SimpleJWT TokenRefreshView.
+    Validates that the refresh token belongs to a valid, non-revoked session.
+    """
+
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            return Response({"detail": "Missing refresh token"}, status=400)
+
+        try:
+            token = RefreshToken(refresh_token)
+            jti = token["jti"]
+            ds = DeviceSession.objects.filter(refresh_token_jti=jti).first()
+            if not ds or ds.revoked:
+                return Response({"detail": "Session revoked or invalid"}, status=401)
+
+            # Proceed with the normal refresh process
+            response = super().post(request, *args, **kwargs)
+
+            # If refresh token rotation is used, update the stored JTI
+            if response.status_code == 200:
+                new_refresh = response.data.get("refresh")
+                if new_refresh:
+                    new_jti = str(RefreshToken(new_refresh)["jti"])
+                    ds.refresh_token_jti = new_jti
+                    ds.last_seen = timezone.now()
+                    ds.save()
+
+            return response
+
+        except TokenError:
+            return Response({"detail": "Invalid token"}, status=401)
