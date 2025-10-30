@@ -128,6 +128,8 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 SOCIALACCOUNT_QUERY_EMAIL = True
 
+AUTH_USER_MODEL = "accounts.User"
+
 WSGI_APPLICATION = 'auth_service.wsgi.application'
 
 
