@@ -1,12 +1,44 @@
 from django.utils import timezone
+from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.views import TokenRefreshView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from dj_rest_auth.registration.views import SocialLoginView
+
 from .models import DeviceSession
-from .serializers import UserSerializer, DeviceSessionSerializer
+from .serializers import RegisterSerializer, UserSerializer, DeviceSessionSerializer
+
+
+# === USER REGISTRATION ===
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """
+        Registers a new user and returns JWT tokens immediately.
+        """
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        device_name = request.data.get("device_name", "Registration Device")
+
+        refresh = RefreshToken.for_user(user)
+        jti = str(refresh["jti"])
+        DeviceSession.objects.create(
+            user=user, device_name=device_name, refresh_token_jti=jti)
+
+        return Response(
+            {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": UserSerializer(user).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 # === LOGIN ===
@@ -20,7 +52,12 @@ class LoginView(APIView):
 
         user = authenticate(request, username=email, password=password)
         if not user:
-            return Response({"detail": "Invalid credentials"}, status=400)
+            return Response(
+                {
+                    "detail": "Invalid credentials"
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
         refresh = RefreshToken.for_user(user)
         jti = str(refresh["jti"])
@@ -38,6 +75,27 @@ class LoginView(APIView):
         )
 
 
+# === GET CURRENT USER PROFILE ===
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        Returns the authenticated user's profile information.
+        """
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+
+# === GOOGLE AUTH (OAUTH2) ===
+class GoogleAuthView(SocialLoginView):
+    """
+    Handles Google OAuth2 login using dj-rest-auth + allauth.
+    Frontend must send 'access_token' obtained from Google Sign-In.
+    """
+    adapter_class = GoogleOAuth2Adapter
+
+
 # === LOGOUT ===
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -51,7 +109,7 @@ class LogoutView(APIView):
 
         # Validate param from request
         if not refresh_token:
-            return Response({"detail": "Missing refresh token"}, status=400)
+            return Response({"detail": "Missing refresh token"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             token = RefreshToken(refresh_token)
@@ -61,7 +119,7 @@ class LogoutView(APIView):
             token.blacklist()  # optional, requires SIMPLEJWT blacklist app
         except Exception:
             pass
-        return Response({"detail": "Logged out successfully"}, status=205)
+        return Response({"detail": "Logged out successfully"}, status=status.HTTP_205_RESET_CONTENT)
 
 
 # === LIST ALL ACTIVE SESSIONS ===
@@ -88,11 +146,11 @@ class SessionRevokeView(APIView):
         try:
             session = DeviceSession.objects.get(id=pk, user=request.user)
         except DeviceSession.DoesNotExist:
-            return Response({"detail": "Session not found"}, status=404)
+            return Response({"detail": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
 
         session.revoked = True
         session.save()
-        return Response({"detail": "Session revoked"}, status=200)
+        return Response({"detail": "Session revoked"}, status=status.HTTP_200_OK)
 
 
 # === TOKEN REFRESH WITH SESSION CONTROL ===
@@ -105,14 +163,14 @@ class SecureTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         refresh_token = request.data.get("refresh")
         if not refresh_token:
-            return Response({"detail": "Missing refresh token"}, status=400)
+            return Response({"detail": "Missing refresh token"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             token = RefreshToken(refresh_token)
             jti = token["jti"]
             ds = DeviceSession.objects.filter(refresh_token_jti=jti).first()
             if not ds or ds.revoked:
-                return Response({"detail": "Session revoked or invalid"}, status=401)
+                return Response({"detail": "Session revoked or invalid"}, status=status.HTTP_401_UNAUTHORIZED)
 
             # Proceed with the normal refresh process
             response = super().post(request, *args, **kwargs)
@@ -129,4 +187,4 @@ class SecureTokenRefreshView(TokenRefreshView):
             return response
 
         except TokenError:
-            return Response({"detail": "Invalid token"}, status=401)
+            return Response({"detail": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)

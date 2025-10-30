@@ -51,8 +51,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.facebook',
-    'allauth.socialaccount.providers.twitter',
+    # 'allauth.socialaccount.providers.facebook',
     'corsheaders',
 
     'accounts',
@@ -120,17 +119,22 @@ CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://localhost:8000').split(',')
 
 
+SITE_ID = 1
+
+# DJ-REST-AUTH CONFIG
+REST_USE_JWT = True
+
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 )
-ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_UNIQUE_EMAIL = True
 # can be "mandatory", "optional", or "none"
 ACCOUNT_EMAIL_VERIFICATION = "optional"
-SOCIALACCOUNT_QUERY_EMAIL = True
 
 AUTH_USER_MODEL = "accounts.User"
 
