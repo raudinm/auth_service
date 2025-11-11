@@ -1,0 +1,253 @@
+{
+	"info": {
+		"_postman_id": "bf089a55-74a0-4bf8-b78d-079f80b30b7e",
+		"name": "📘 Auth Service",
+		"description": "A collection of endpoints that handle user authentication: registration, login, logout, session management, and token refresh.\n\n**Global variables:**\n\n- `{baseURL}`: Base URL of the API (e.g. `https://api.yourdomain.com`)\n    \n- `{access_token}`: JWT access token obtained after login.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3614837"
+	},
+	"item": [
+		{
+			"name": "Login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"raudin@gmail.com\",\n    \"password\": \"password\",\n    \"device_name\": \"Postman on MacOS\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/auth/login",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login"
+					]
+				},
+				"description": "Authenticates a user using email and password credentials and returns access and refresh tokens."
+			},
+			"response": []
+		},
+		{
+			"name": "Sessions",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL}}/api/auth/sessions",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"sessions"
+					]
+				},
+				"description": "Lists all active sessions for the authenticated user."
+			},
+			"response": []
+		},
+		{
+			"name": "Revoke Sessions",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL}}/api/auth/sessions/7ff354a3-eac5-48d6-a158-495c8728d443/revoke",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"sessions",
+						"7ff354a3-eac5-48d6-a158-495c8728d443",
+						"revoke"
+					]
+				},
+				"description": "Revokes (logs out) a specific active session."
+			},
+			"response": []
+		},
+		{
+			"name": "Logout",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"refresh\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc2MzA0OTY1MiwiaWF0IjoxNzYxODQwMDUyLCJqdGkiOiJkYmQ3NWYwODZhYWY0MDc1OTQ3MDVmODg3NTYzMGExNCIsInVzZXJfaWQiOiIxIn0.1jN4Zlw1oUU_f9sxq4Bx0HcWDgIxhHkdoXWgJfrA08Q\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/auth/logout",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"logout"
+					]
+				},
+				"description": "Logs out the current session and invalidates the refresh token."
+			},
+			"response": []
+		},
+		{
+			"name": "Refresh Access Token",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"refresh\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc2MzA0OTY1MiwiaWF0IjoxNzYxODQwMDUyLCJqdGkiOiJkYmQ3NWYwODZhYWY0MDc1OTQ3MDVmODg3NTYzMGExNCIsInVzZXJfaWQiOiIxIn0.1jN4Zlw1oUU_f9sxq4Bx0HcWDgIxhHkdoXWgJfrA08Q\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/auth/refresh",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"refresh"
+					]
+				},
+				"description": "Generates a new access token from a valid refresh token."
+			},
+			"response": []
+		},
+		{
+			"name": "Me",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL}}/api/auth/me",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"me"
+					]
+				},
+				"description": "Retrieves the information of the currently authenticated user."
+			},
+			"response": []
+		},
+		{
+			"name": "Register",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"raudin@gmail.com\",\n    \"password\": \"password\",\n    \"name\": \"Raudin\",\n    \"device_name\": \"Postman\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/auth/register",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"register"
+					]
+				},
+				"description": "Creates a new user and initializes a session linked to the specified device."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": ""
+		},
+		{
+			"key": "access_token",
+			"value": ""
+		}
+	]
+}
