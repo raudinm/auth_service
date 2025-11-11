@@ -22,6 +22,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r backend/requirements.txt
 
+      - name: Create .env file
+        run: |
+          # echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > backend/.env
+          echo "SECRET_KEY=my_secure_secret_key" > backend/.env
+          echo "DEBUG=False" >> backend/.env
+          echo "ALLOWED_HOSTS=*" >> backend/.env
+          echo "CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000" >> backend/.env
+          echo "CSRF_COOKIE_SECURE=False" >> backend/.env
+          echo "SESSION_COOKIE_SECURE=False" >> backend/.env
+          echo "SECURE_SSL_REDIRECT=False" >> backend/.env
+          echo "GOOGLE_CLIENT_ID=google_client_id" >> backend/.env
+          echo "GOOGLE_SECRET=google_secret_key" >> backend/.env
+
       - name: Run Django migrations
         run: |
           cd backend
