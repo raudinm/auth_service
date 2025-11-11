@@ -95,6 +95,38 @@ class GoogleAuthView(SocialLoginView):
     """
     adapter_class = GoogleOAuth2Adapter
 
+    def post(self, request, *args, **kwargs):
+        # Call the parent SocialLoginView to handle the OAuth flow
+        response = super().post(request, *args, **kwargs)
+
+        # If login was successful, generate JWT tokens
+        if response.status_code == 200:
+            user = self.request.user
+            device_name = request.data.get(
+                "device_name", "Google OAuth Device")
+
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            jti = str(refresh["jti"])
+
+            # Create device session
+            DeviceSession.objects.create(
+                user=user, device_name=device_name, refresh_token_jti=jti
+            )
+
+            # Return JWT tokens instead of session key
+            return Response(
+                {
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "user": UserSerializer(user).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # If login failed, return the original response
+        return response
+
 
 # === LOGOUT ===
 class LogoutView(APIView):

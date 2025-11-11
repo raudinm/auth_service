@@ -1,4 +1,3 @@
-import NextAuth from "next-auth";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
@@ -34,8 +33,6 @@ export const authOptions: NextAuthOptions = {
               password: credentials.password,
               device_name: credentials.device_name || "NextAuth Client",
             });
-
-            console.log(response.data);
           }
 
           const { access, refresh, user, session_id } = response.data;
@@ -73,7 +70,6 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
-      // console.log("signIn", user, account, profile, email, credentials);
       return true;
     },
     async jwt({ token, user, account }: any) {
@@ -84,7 +80,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          avatar: user.avatar,
+          avatar: user.image,
         };
       }
 
@@ -95,8 +91,6 @@ export const authOptions: NextAuthOptions = {
             access_token: account.access_token,
           });
 
-          console.log("Google OAuth response:", response.data);
-
           const { access, refresh, user: backendUser } = response.data;
 
           token.accessToken = access;
@@ -104,8 +98,8 @@ export const authOptions: NextAuthOptions = {
           token.user = {
             id: backendUser.id,
             email: backendUser.email,
-            name: backendUser.name,
-            avatar: backendUser.avatar,
+            name: backendUser.name || user.name,
+            avatar: backendUser.avatar || user.image,
           };
         } catch (error) {
           console.error("Google OAuth error:", error);

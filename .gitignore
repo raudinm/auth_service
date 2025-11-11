@@ -143,3 +143,4 @@ staticfiles/
 *.sqlite3-journal
 local_settings.py
 secrets.json
+!.env.example

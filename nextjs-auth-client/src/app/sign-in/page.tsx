@@ -109,7 +109,12 @@ export default function SignIn() {
         </div>
         <div className="mt-4">
           <button
-            onClick={() => signIn("google")}
+            onClick={async () =>
+              signIn("google", {
+                redirect: true,
+                callbackUrl: "/dashboard",
+              })
+            }
             className="w-full flex justify-center items-center py-2 px-4 border border-zinc-300 dark:border-zinc-600 rounded-md shadow-sm text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <svg
